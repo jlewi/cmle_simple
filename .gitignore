@@ -1,0 +1,20 @@
+# dist directories
+**/dist
+*.egg-info
+
+# Compiled python files.
+*.pyc
+
+# Emacs temporary files
+*~
+
+# Other temporary files
+*#
+
+# Bazel generated directories
+bazel-*
+
+# Eclipse project related
+.project
+.pydevproject
+**/.ipynb_checkpoints
