@@ -8,8 +8,7 @@ import json
 import logging
 import os
 
-import google.cloud.ml.util._file as ml_file
-import google.cloud.ml.util._api as ml_api
+import google.cloud.storage as gcs
 from googleapiclient import discovery
 from googleapiclient import errors
 from googleapiclient import http
@@ -18,6 +17,10 @@ from oauth2client.client import GoogleCredentials
 import pytz
 import subprocess
 import tempfile
+
+import re
+
+GcsPattern = re.compile(r"gs://([^/]*)/(.*)")
 
 def PrettyFormat(d):
     return json.dumps(d, sort_keys=True,
@@ -38,15 +41,28 @@ def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
   logging.info("Found packages: %s", packages)
   if not packages:
     raise ValueError("No packages matched glob: %s" % glob_path)
-    
+
+  gcs_client = gcs.Client(project_id)
+
   # Copy the code to GCS  
   gcs_packages = []
+  bucket = None
   for p in packages:
     dest = os.path.join(output_path,
                         'staging', os.path.basename(p))
 
+
+    m = GcsPattern.match(dest)
+    if not m:
+        raise ValueError("Not a  GCS package %s" % dest)
+    bucket_name = m.group(1)
+    obj_path = m.group(2)
+    if not bucket or bucket_name != bucket.name:
+        bucket = gcs_client.get_bucket(bucket_name)
+    blob = bucket.blob(obj_path)
+
     logging.info('Copying %s to %s', p, dest)
-    ml_file.copy_file(p, dest)
+    blob.upload_from_filename(p)
     gcs_packages.append(dest)
 
 
@@ -54,7 +70,7 @@ def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
   
   cloudml = discovery.build(
       'ml',
-      'v1beta1',
+      'v1',
       requestBuilder=http.HttpRequest,
       credentials=credentials)
 
@@ -75,6 +91,7 @@ def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
          'python_module': 'running_average.running_average_main',
          'region': 'us-central1',
          'args': main_args,
+          'runtimeVersion': '1.2',
       }
   }
   jobs = cloudml.projects().jobs()
@@ -92,26 +109,6 @@ def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
                              separators=(',', ': '))
     logging.error('Response Headers: %s', pretty_resp)
 
-  # Poll the job until its done.
-  api = ml_api.ApiBeta(credential=credentials, project_id=project_id)
-  final_job = api.wait_for_job(job_name)
-  logging.info('Job status:\n %s', PrettyFormat(final_job))
-  if final_job['state'] in ['RUNNING', 'QUEUED', 'CANCELLING', 'PREPARING']:
-    msg = ('The training job {0} did not complete in the time '
-           'allotted.').format(job_name)
-    logging.error(msg)
-  else:
-    # The job completed. So now we need to check whether it completed
-    # successfully or with an error.
-    if final_job['state'] != "SUCCEEDED":
-      # The job finished with an error.
-      msg = 'The training job {0} finished with {1} error: {1}.'.format(
-          job_name, final_job['errorMessage'])
-      logging.error(msg)
-    else:
-      logging.info('Job completed successfully')
-
-    return final_job
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
@@ -136,4 +133,4 @@ if __name__ == '__main__':
   # Parse the arguments. Unknown arguments will be treated as arguments of the program.
   args, main_args = parser.parse_known_args()
 
-  submit_job(args.job_name, main_args, args.output_path, args,project_id, args.endpoint)
+  submit_job(args.job_name, main_args, args.output_path, args.project_id, args.endpoint)

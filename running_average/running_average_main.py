@@ -1,4 +1,4 @@
-"""Train a simple model that computes a running average of the inputs.
+"""Train a simple model.
 
 The model implements the equations
 y = x - w
@@ -19,6 +19,12 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow.contrib.session_bundle import exporter
+
+from tensorflow.python.saved_model import builder as saved_model_builder
+from tensorflow.python.saved_model import signature_constants
+from tensorflow.python.saved_model import signature_def_utils
+from tensorflow.python.saved_model import tag_constants
+from tensorflow.python.saved_model import utils as saved_model_utils
 
 def parse_args():
   parser = argparse.ArgumentParser()
@@ -82,7 +88,7 @@ def run(server, train_data_paths, output_path, is_chief):
     # Create a summary writer
     summary_location = os.path.join(output_path, "summaries")
     logging.info("Writing summaries to: %s", summary_location)
-    summary_writer = tf.train.SummaryWriter(
+    summary_writer = tf.summary.FileWriter(
         summary_location,
         graph=g)
   
@@ -143,9 +149,6 @@ def run(server, train_data_paths, output_path, is_chief):
           logging.info("Save final checkpoint.")
           saver.save(sess, save_dir, global_step=step)
           
-          logging.info("Export model.")
-          export_model(sess, saver, os.path.join(output_path, "exported_model"))
-          logging.info("Finished exporting the model.")
 
         logging.info("Stopping services.")
         # Ask for all the services to stop.
@@ -154,9 +157,9 @@ def run(server, train_data_paths, output_path, is_chief):
         
         logging.info("Services stopped.")
 
-      
+
 GraphOps = collections.namedtuple(
-    'GraphOps', ['weights', 'global_step', 'train'])
+    'GraphOps', ['weights', 'global_step', 'train', 'inputs', 'targets'])
 
 def build_graph(train_data_paths):
   """Build the graph.
@@ -193,7 +196,7 @@ def build_graph(train_data_paths):
   # The initial value should be such that type is correctly inferred as
   # float.
   weights = tf.Variable([0.0], name='weights')  
-  outputs = tf.add(inputs, tf.neg(weights))
+  outputs = tf.add(inputs, tf.negative(weights))
   
   diff = targets - outputs
   error = tf.reduce_mean(diff * diff)
@@ -207,62 +210,9 @@ def build_graph(train_data_paths):
   with tf.control_dependencies([update_weights]):
     train = global_step.assign_add(tf.constant(
         1, global_step.dtype))  
-  return GraphOps(weights=weights, global_step=global_step, train=train)
+  return GraphOps(weights=weights, global_step=global_step, train=train, inputs=inputs, targets=targets)
 
-def export_model(sess, training_saver, output_path):
-  """Export the trained model for serving.
-  
-  Args:
-    sess: The session containing the trained model.
-    training_saver: The saver used for training.
-    output_path: The directory where the model should be exported.
-  """
-  logging.info("Exporting the model to %s", output_path)
-  
-  with tf.Graph().as_default() as inference_graph:
-    with tf.name_scope('inputs'):
-      # The input is a string containing a serialized Example proto.      
-      input_data = tf.placeholder(tf.string, name = 'inputs')
-    
-    features = tf.parse_example(
-      input_data,
-      features={
-        'inputs': tf.FixedLenFeature(shape=[], dtype=tf.float32, default_value=[-1]),
-      })
-        
 
-    inputs = features['inputs']
-  
-    # The initial value should be such that type is correctly inferred as
-    # float.
-    weights = tf.Variable([0.0], name='weights')  
-    outputs = tf.add(inputs, tf.neg(weights))
-    
-    # Mark the inputs and the outputs
-    tf.add_to_collection("inputs",  json.dumps({"inputs": inputs.name}))
-    tf.add_to_collection("outputs", json.dumps({"outputs": outputs.name}))
-  
-    # We need to save 
-    #  1. the variables from the training session
-    #  2. the prediction/serving graph.
-
-    # TOD(jlewi): Can we use session_bundle to export the model?
-    
-    # Serialize the graph (MetaGraphDef)
-    # Create a saver for the export graph. We use a different saver.
-    inference_saver = tf.train.Saver(tf.all_variables())
-    inference_saver.export_meta_graph(
-        filename=os.path.join(output_path, "export.meta"))
-
-    # Save the variables. Don't write the MetaGraphDef, because that is
-    # actually the training graph.
-    # TODO(chmeyers): I think tf_exporter requires this to be sharded, a
-    # requirement we may wish to relax.
-    # TODO(chmeyers): annoyingly, this creates a checkpoint state file.
-    training_saver.save(sess,
-                        os.path.join(output_path, "export"),
-                        write_meta_graph=False)
-                        
 def main(args): 
   """Run training
   

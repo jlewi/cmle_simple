@@ -18,3 +18,4 @@ bazel-*
 .project
 .pydevproject
 **/.ipynb_checkpoints
+.idea/**

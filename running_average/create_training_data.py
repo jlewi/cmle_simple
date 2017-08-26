@@ -20,9 +20,12 @@ if __name__ == '__main__':
                       help='The GCS path to which output will be written.') 
   args = parser.parse_args()
 
+  logging.info("Creating data")
   example_data = data.create_examples(100, 5)
+  logging.info("Writing to file")
   with tf.python_io.TFRecordWriter(args.output_path) as hf:
-    for e in example_data:
+    for i, e in enumerate(example_data):
+      logging.info("Appending record %s", i)
       hf.write(e.SerializeToString())
       
   logging.info("Data written to: %s", args.output_path)

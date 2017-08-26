@@ -8,8 +8,6 @@ e.g.
   python -m running_average.train_test
 """
 
-import datetime
-import json
 import logging
 import os
 import subprocess
@@ -17,17 +15,8 @@ import tempfile
 import tensorflow as tf
 import unittest
 
-import numpy as np
-from tensorflow.core.example import example_pb2
-
-from google.cloud import dataflow as df
-from google.cloud.dataflow import coders as df_coders
-from google.cloud.ml.dataflow import train_with_graph_builder_transform
-from google.cloud.ml.dataflow import train_with_tf_transform
-from google.cloud.ml.dataflow import training_service
-from google.protobuf import json_format
-
 from running_average import data
+from running_average import build_saved_model
 
 class TrainRunningAverage(unittest.TestCase):
 
@@ -44,14 +33,17 @@ class TrainRunningAverage(unittest.TestCase):
       
     output_path = tempfile.mkdtemp(prefix='tmpRunningAverageLocal')
     logging.info('Using output path: %s', output_path)
+    train_path = os.path.join(output_path, "train_output")
     args = ["python", "-m", "running_average.running_average_main", "--train_data_path=" + input_path,
-            "--output_path=" + output_path]
+            "--output_path=" + train_path]
 
-    # We invoke it as a subprocess because we want to verify command line parsing
+    # We invoke it as a subprocess train_path we want to verify command line parsing
     # doesn't have problems.
     logging.info("Running: %s", " ".join(args))
     subprocess.check_call(args)
-    
+
+    save_path = os.path.join(output_path, 'savd_model')
+    build_saved_model.save_model(train_path, save_path)
     # TODO(jlewi): Add more assertions. We should check 
     #  1. The trained value.
     #  2. The exported model.
