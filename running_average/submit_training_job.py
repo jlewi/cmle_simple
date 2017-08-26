@@ -14,6 +14,9 @@ from googleapiclient import errors
 from googleapiclient import http
 from oauth2client.client import GoogleCredentials
 
+from running_average import util
+
+
 import pytz
 import subprocess
 import tempfile
@@ -21,10 +24,6 @@ import tempfile
 import re
 
 GcsPattern = re.compile(r"gs://([^/]*)/(.*)")
-
-def PrettyFormat(d):
-    return json.dumps(d, sort_keys=True,
-                      indent=2, separators=(',', ': '))
 
 def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
   # Build the setup package.
@@ -100,7 +99,7 @@ def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
 
   try:
     response = request.execute()
-    logging.info('Set response:\n%s', PrettyFormat(response))
+    logging.info('Set response:\n%s', util.PrettyFormat(response))
   except errors.HttpError as e:
     logging.error('Job submission failed: %s', e)
     # If running on corp response will contain BNS of the backend that was
