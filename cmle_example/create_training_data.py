@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import tensorflow as tf
 
-from running_average import data
+from cmle_example import data
 
 
 if __name__ == '__main__':

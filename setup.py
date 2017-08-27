@@ -20,12 +20,12 @@ from setuptools import setup
 REQUIRED_PACKAGES = []
 
 setup(
-    name='running_average',
+    name='cmle_example',
     version='0.1.1',
     author='Google',
     author_email='jeremy@lewi.us',
     install_requires=REQUIRED_PACKAGES,
     packages=find_packages(),
-    description='A simple example',
+    description='A simple CMLE example',
     requires=[],    
 )

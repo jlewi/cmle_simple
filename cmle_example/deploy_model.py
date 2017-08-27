@@ -10,9 +10,9 @@ from googleapiclient import discovery
 from googleapiclient import errors
 from googleapiclient import http
 from oauth2client.client import GoogleCredentials
-from running_average import util
+from cmle_example import util
 
-MODEL_NAME = 'running_average'
+MODEL_NAME = 'cmle_example'
 
 def deploy(project_id, model_path, model_name, model_version, runtime_version='1.2', endpoint=None):
   """Deply the model.

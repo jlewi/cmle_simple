@@ -14,7 +14,7 @@ from googleapiclient import errors
 from googleapiclient import http
 from oauth2client.client import GoogleCredentials
 
-from running_average import util
+from cmle_example import util
 
 
 import pytz
@@ -87,7 +87,7 @@ def submit_job(job_name, main_args, output_path, project_id, endpoint=None):
       'training_input': {
          'scale_tier': 'STANDARD_1',
          'package_uris': gcs_packages,
-         'python_module': 'running_average.running_average_main',
+         'python_module': 'cmle_example.train',
          'region': 'us-central1',
          'args': main_args,
           'runtimeVersion': '1.2',

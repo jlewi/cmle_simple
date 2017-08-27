@@ -15,8 +15,8 @@ import tempfile
 import tensorflow as tf
 import unittest
 
-from running_average import data
-from running_average import build_saved_model
+from cmle_example import data
+from cmle_example import build_saved_model
 
 class TrainRunningAverage(unittest.TestCase):
 
@@ -34,7 +34,7 @@ class TrainRunningAverage(unittest.TestCase):
     output_path = tempfile.mkdtemp(prefix='tmpRunningAverageLocal')
     logging.info('Using output path: %s', output_path)
     train_path = os.path.join(output_path, "train_output")
-    args = ["python", "-m", "running_average.running_average_main", "--train_data_path=" + input_path,
+    args = ["python", "-m", "cmle_example.train", "--train_data_path=" + input_path,
             "--output_path=" + train_path]
 
     # We invoke it as a subprocess train_path we want to verify command line parsing
