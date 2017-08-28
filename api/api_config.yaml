@@ -1,0 +1,9 @@
+type: google.api.Service
+config_version: 3
+
+name: cmle.example.endpoints.dataflow-jlewi.cloud.goog
+
+title: CMLE Example gRPC API
+apis:
+# Name of the service defined in the proto file.
+- name: cmle.example.CmleExample

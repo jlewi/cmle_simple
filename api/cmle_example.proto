@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package cmle.example;
+
+// The CmleExample service definition.
+service CmleExample {
+  // Sends a prediction request
+  rpc Predict (PredictRequest) returns (PredictResponse) {}
+}
+
+// The prediction request.
+message PredictRequest {
+  float input = 1;
+}
+
+// The response containing the prediction.
+message PredictResponse {
+  float output = 1;
+}
