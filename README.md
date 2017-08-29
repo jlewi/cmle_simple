@@ -18,3 +18,17 @@ this docker image with the following command.
 ```
 ./images/datalab/build_and_push.py --project=$PROJECT
 ```
+
+## To run the server locally 
+
+```
+python -m cmle_example.server
+```
+
+`* You probably want to run it inside a container to pick up dependencies like gRPC
+
+You can now call the service using
+
+```
+python -m cmle_example.client
+```
